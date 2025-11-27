@@ -87,8 +87,7 @@ function global:Send-Event{
         $eventObj["event.code"] = [int]$rawId
         $eventObj["host.os.type"] ="windows"
         $eventObj["log_name"] = if ($evt.Logname) {$evt.Logname} else {$logName}
-        $eventObj["computer_name"] = $evt:COMPUTERNAME
-
+        $eventObj["computer_name"] = $xml.Event.System.Computer
     
         $eventJson =  $eventObj | ConvertTo-Json -Depth 10 -Compress
         #$syslogMsg = "<$priority>$($eventObj.'@timestamp') $($eventObj.computer_name) $($eventObj.log_name): $eventJson `n"
