@@ -79,7 +79,7 @@ function global:Send-Event{
 
         # Calculate syslog priority
 
-        $priority = 14
+       
         $rawId = $evt.Id -replace ',', ''
 
         $eventObj["@timestamp"] = $evt.TimeCreated.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
