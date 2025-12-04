@@ -54,10 +54,12 @@ function onEvent {
 
     try {
         # Convert event to PowerShell object
-        $eventObj = $event | Select-Object -Property *
+
+        $eventxml = [xml]$event.ToXml()
+        
 
         # Convert to JSON
-        $json = $eventObj | ConvertTo-Json -Depth 20
+        $json = $eventxml | ConvertTo-Json -Depth 20
 
         # Convert JSON to bytes and send to Logstash
         $bytes = [System.Text.Encoding]::UTF8.GetBytes($json + "`n")
