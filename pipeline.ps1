@@ -13,15 +13,13 @@ foreach ($w in $watchers){
         }
     }
 }
-$remoteHost = "192.168.186.131" # <-- Destination computer (collector)
-$remotePort = 5514  # Changed to TCP port for better reliability with JSON
 
-# Create TCP client for more reliable JSON transmission
 $tcpClient = $null
+$remoteHost = "192.168.186.131"
+$remotePort = 5503
 
-# Function to create TCP connection with retry logic
 function Connect-ToLogstash{
-    $maxRetries =3
+    $maxRetries =5
     $retryDelay =2
 
     for ($i=0;$i -lt $maxRetries ; $i++){
@@ -46,88 +44,36 @@ function Connect-ToLogstash{
 }
 
 
-function global:Send-Event{
-    param($evt,$logName="Unknown")
+# Create TCP client (reuse connection)
 
-    try{
+# In your event handler
+function onEvent {
+    param($sender, $eventArgs)
 
-        $xml = [xml]$evt.ToXml()
-        $eventData = @{}
-        $eventObj = @{
-        winlog = @{
-            event_data = @{}
-          }
-        }
-        $i = 0
-        foreach ($d in $xml.Event.EventData.Data) {
-            if ($d.Name) {
-                #Convert snake_case to CamelCase safely
-                #$parts = $d.Name -split ' '
-                #$camelCaseName = ($parts | ForEach-Object {
-                   # $_.Substring(0,1).ToUpper() + $_.Substring(1).ToLower()
-                #}) -join ''
+    $event = $eventArgs.EventRecord
 
-                $eventData[$d.Name] = $d.'#text'
-                $eventObj["winlog"]["event_data"][$d.Name] = $d.'#text'
+    try {
+        # Convert event to PowerShell object
+        $eventObj = $event | Select-Object -Property *
 
-            } else {
-                $eventData["Data$i"] = $d.'#text'
-            }
-            
-            $i++
-        }
+        # Convert to JSON
+        $json = $eventObj | ConvertTo-Json -Depth 20
 
-        # Calculate syslog priority
+        # Convert JSON to bytes and send to Logstash
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($json + "`n")
+        $stream.Write($bytes, 0, $bytes.Length)
+        $stream.Flush()
 
-       
-        $rawId = $evt.Id -replace ',', ''
-
-        $eventObj["@timestamp"] = $evt.TimeCreated.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-        $eventObj["event.time"] = $xml.Event.System.TimeCreated.SystemTime
-        $eventObj["event.code"] = [int]$rawId
-        $eventObj["host.os.type"] ="windows"
-        $eventObj["log_name"] = if ($evt.Logname) {$evt.Logname} else {$logName}
-        $eventObj["computer_name"] = $xml.Event.System.Computer
-    
-        $eventJson =  $eventObj | ConvertTo-Json -Depth 10 -Compress
-        #$syslogMsg = "<$priority>$($eventObj.'@timestamp') $($eventObj.computer_name) $($eventObj.log_name): $eventJson `n"
-
-        Write-Output $eventJson
-        
-
+        Write-Host "Sent EventID $($event.Id) to Logstash" -ForegroundColor Green
     }
-
-    catch{
-        # Log details of the failed event
-        $errorMessage = $_.Exception.Message
-        $eventId      = if ($evt) { $evt.Id } else { "Unknown" }
-        $logChannel   = if ($evt) { $evt.LogName } else { $logName }
-
-        Write-Warning "Failed to process event. EventID: $eventId, Log: $logChannel, Error: $errorMessage"
-
-    
+    catch {
+        Write-Host "Error sending event: $_" -ForegroundColor Red
     }
-
-    if (-not $script:tcpClient -or -not $script:tcpClient.Connected) {
-            if (-not (Connect-ToLogstash)) {
-                Write-Warning "Cannot establish connection to Logstash"
-                return
-            }
-        }
-
-    #$bytes = [System.Text.Encoding]::UTF8.GetBytes($eventJson)
-    $bytes = [System.Text.Encoding]::UTF8.GetBytes($eventJson + "`n")
-    $stream = $script:tcpClient.GetStream()
-    $stream.Write($bytes, 0, $bytes.Length)
-    $stream.Flush()
-        
-    Write-Host "Sent Event ID $($evt.Id) from $($eventObj.log_name) - $($bytes.Length) bytes ($(Get-Date -Format 'HH:mm:ss'))"
-        
-
 }
 
 
 $send_event ={
+
     param($sender,$eventArgs)
 
     $record =  $eventArgs.EventRecord
@@ -152,13 +98,16 @@ $send_event ={
     catch{
         Write-Host "Mesage: <XML format -see structured data>"
     }
+
 }
 
-$Log_List = New-Object System.Collections.Generic.List[string]
-$Log_List.Add("Application")
-$Log_List.Add("System")
-$Log_List.Add("Security")
 
+#List to create watchers for security events
+
+$Log_List = New-Object System.Collections.Generic.List[string]
+#$Log_List.Add("Application")  Monitoring for application and system logs should not be neccessary in this case since Winlog does not have a pipeline for this.
+#$Log_List.Add("System")
+$Log_List.Add("Security")
 
 
 try{
@@ -186,10 +135,6 @@ Write-Host "Forwarding event logs to ${remoteHost}:${remotePort} via TCP with st
 Write-Host "Initial events sent from: Security, Application, System logs"
 Write-Host "Real-time monitoring: Security, Application and System logs"
 Write-Host "Press Ctrl+C to stop"
-
-
-
-
 
 $cleanup = {
     Write-Host "`nShutting down..."
