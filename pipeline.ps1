@@ -47,7 +47,7 @@ function Connect-ToLogstash{
 # Create TCP client (reuse connection)
 
 # In your event handler
-function onEvent {
+function SendEvent {
     param($sender, $eventArgs)
 
     $event = $eventArgs.EventRecord
@@ -63,6 +63,7 @@ function onEvent {
 
         # Convert JSON to bytes and send to Logstash
         $bytes = [System.Text.Encoding]::UTF8.GetBytes($json + "`n")
+        $stream = $script:tcpClient.GetStream()
         $stream.Write($bytes, 0, $bytes.Length)
         $stream.Flush()
 
@@ -81,7 +82,7 @@ $send_event ={
     $record =  $eventArgs.EventRecord
 
     try{
-        Send-Event $record $record.LogName
+        SendEvent $record $record.LogName
         Write-Host "Event successfully forwarded to remote host"
     }
 
