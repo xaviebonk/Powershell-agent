@@ -48,15 +48,12 @@ function Connect-ToLogstash{
 
 # In your event handler
 function global:SendEvent {
-    param($sender, $eventArgs)
+    param($evt, $logname ="Unknown")
 
-    $event = $eventArgs.EventRecord
+    $eventxml = [xml]$evt.ToXml()
 
     try {
         # Convert event to PowerShell object
-
-        $eventxml = [xml]$event.ToXml()
-        
 
         # Convert to JSON
         $json = $eventxml | ConvertTo-Json -Depth 20
