@@ -16,9 +16,11 @@ foreach ($w in $watchers){
 
 $tcpClient = $null
 $remoteHost = "192.168.186.131"
-$remotePort = 5503
+$remotePort = 5514
 
 function Connect-ToLogstash{
+
+
     $maxRetries =5
     $retryDelay =2
 
@@ -44,34 +46,39 @@ function Connect-ToLogstash{
 }
 
 
-# Create TCP client (reuse connection)
-
 # In your event handler
-function SendEvent {
-    param($sender, $eventArgs)
+function global:SendEvent {
+    param($evt, $logname ="Unknown")
 
-    $event = $eventArgs.EventRecord
+    $eventxml = [xml]$evt.ToXml()
 
     try {
         # Convert event to PowerShell object
-
-        $eventxml = [xml]$event.ToXml()
-        
-
+        $eventxml = [xml]$evt.ToXml()
         # Convert to JSON
         $json = $eventxml | ConvertTo-Json -Depth 20
 
         # Convert JSON to bytes and send to Logstash
-        $bytes = [System.Text.Encoding]::UTF8.GetBytes($json + "`n")
-        $stream = $script:tcpClient.GetStream()
-        $stream.Write($bytes, 0, $bytes.Length)
-        $stream.Flush()
-
-        Write-Host "Sent EventID $($event.Id) to Logstash" -ForegroundColor Green
+        
+        #Write-Host "Sent EventID $($event.Id) to Logstash" -ForegroundColor Green
     }
     catch {
         Write-Host "Error sending event: $_" -ForegroundColor Red
     }
+
+    if (-not $script:tcpClient -or -not $script:tcpClient.Connected) {
+            if (-not (Connect-ToLogstash)) {
+                Write-Warning "Cannot establish connection to Logstash"
+                return
+            }
+    }
+
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($json + "`n")
+    $stream = $script:tcpClient.GetStream()
+    $stream.Write($bytes, 0, $bytes.Length)
+    $stream.Flush()
+
+
 }
 
 
