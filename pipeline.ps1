@@ -19,6 +19,8 @@ $remoteHost = "192.168.186.131"
 $remotePort = 5503
 
 function Connect-ToLogstash{
+
+
     $maxRetries =5
     $retryDelay =2
 
@@ -44,10 +46,8 @@ function Connect-ToLogstash{
 }
 
 
-# Create TCP client (reuse connection)
-
 # In your event handler
-function SendEvent {
+function global:SendEvent {
     param($sender, $eventArgs)
 
     $event = $eventArgs.EventRecord
