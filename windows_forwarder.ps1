@@ -57,6 +57,9 @@ function global:Send-Event{
         winlog = @{
             event_data = @{}
           }
+        event = @{
+
+        }
         }
         $i = 0
         foreach ($d in $xml.Event.EventData.Data) {
@@ -81,10 +84,10 @@ function global:Send-Event{
 
        
         $rawId = $evt.Id -replace ',', ''
-
+        $eventObj["event"]["code"]=[int]$rawId
         $eventObj["@timestamp"] = $evt.TimeCreated.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
         $eventObj["event.time"] = $xml.Event.System.TimeCreated.SystemTime
-        $eventObj["event.code"] = [int]$rawId
+        #$eventObj["event.code"] = [int]$rawId
         $eventObj["host.os.type"] ="windows"
         $eventObj["log_name"] = if ($evt.Logname) {$evt.Logname} else {$logName}
         $eventObj["computer_name"] = $xml.Event.System.Computer
