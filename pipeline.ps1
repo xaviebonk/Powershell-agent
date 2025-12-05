@@ -16,7 +16,7 @@ foreach ($w in $watchers){
 
 $tcpClient = $null
 $remoteHost = "192.168.186.131"
-$remotePort = 5503
+$remotePort = 5514
 
 function Connect-ToLogstash{
 
