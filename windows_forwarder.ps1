@@ -84,13 +84,14 @@ function global:Send-Event{
 
        
         $rawId = $evt.Id -replace ',', ''
-        $eventObj["event"]["code"]=[int]$rawId
+        $eventObj["event"]["code"]=[string]$rawId
         $eventObj["@timestamp"] = $evt.TimeCreated.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
         $eventObj["event.time"] = $xml.Event.System.TimeCreated.SystemTime
         #$eventObj["event.code"] = [int]$rawId
         $eventObj["host.os.type"] ="windows"
         $eventObj["log_name"] = if ($evt.Logname) {$evt.Logname} else {$logName}
-        $eventObj["computer_name"] = $xml.Event.System.Computer
+        $eventObj["winlog"]["computer_name"] = $xml.Event.System.Computer
+        $eventObj["host.ip"] = "192.168.186.130"
     
         $eventJson =  $eventObj | ConvertTo-Json -Depth 10 -Compress
         #$syslogMsg = "<$priority>$($eventObj.'@timestamp') $($eventObj.computer_name) $($eventObj.log_name): $eventJson `n"
