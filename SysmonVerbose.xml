@@ -1,0 +1,11 @@
+<Sysmon schemaversion="4.70">
+  <EventFiltering>
+    <ProcessCreate onmatch="include">
+      <CommandLine condition="is not empty">
+    </ProcessCreate>
+    <NetworkConnect onmatch="include"/>
+    <FileCreateTime onmatch="include"/>
+    <RegistryEvent onmatch="include"/>
+    <ProcessTerminate onmatch="include"/>
+  </EventFiltering>
+</Sysmon>
