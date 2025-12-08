@@ -2,7 +2,7 @@
 
 
 $remoteHost = "192.168.186.131" # <-- Destination computer (collector)
-$remotePort = 5514  # Changed to TCP port for better reliability with JSON
+$remotePort = 5000  # Changed to TCP port for better reliability with JSON
 
 # Create TCP client for more reliable JSON transmission
 $tcpClient = $null
