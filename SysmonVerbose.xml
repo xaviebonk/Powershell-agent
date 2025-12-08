@@ -3,7 +3,7 @@
 
     <!-- Process Creation -->
     <ProcessCreate onmatch="include">
-      <CommandLine condition="is not empty" />
+      <CommandLine condition="contains" />
     </ProcessCreate>
 
     <!-- Process Termination -->
