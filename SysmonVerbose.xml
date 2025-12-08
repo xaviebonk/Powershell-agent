@@ -1,11 +1,45 @@
 <Sysmon schemaversion="4.70">
   <EventFiltering>
+
+    <!-- Process Creation -->
     <ProcessCreate onmatch="include">
-      <CommandLine condition="is not empty">
+      <CommandLine condition="is not empty" />
     </ProcessCreate>
-    <NetworkConnect onmatch="include"/>
-    <FileCreateTime onmatch="include"/>
-    <RegistryEvent onmatch="include"/>
+
+    <!-- Process Termination -->
     <ProcessTerminate onmatch="include"/>
+
+    <!-- Network Connections -->
+    <NetworkConnect onmatch="include"/>
+
+    <!-- File Activity -->
+    <FileCreate onmatch="include"/>
+    <FileCreateTime onmatch="include"/>
+    <FileDelete onmatch="include"/>
+
+    <!-- Registry Activity -->
+    <RegistryEvent onmatch="include"/>
+
+    <!-- Image Load (DLLs, EXEs) -->
+    <ImageLoad onmatch="include"/>
+
+    <!-- Driver Loaded -->
+    <DriverLoad onmatch="include"/>
+
+    <!-- Named Pipes / RPC -->
+    <PipeEvent onmatch="include"/>
+
+    <!-- DNS queries -->
+    <DnsQuery onmatch="include"/>
+
+    <!-- WMI Activity -->
+    <WmiEvent onmatch="include"/>
+
+    <!-- Process Tampering -->
+    <ProcessAccess onmatch="include"/>
+
+    <!-- Clipboard events -->
+    <ClipboardChange onmatch="include"/>
+
   </EventFiltering>
 </Sysmon>
