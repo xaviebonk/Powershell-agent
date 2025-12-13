@@ -9,7 +9,7 @@ foreach ($w in $watchers){
             $w.Value.Dispose()
         }
         catch{
-            Write-Warning:"Failed to dispose $($w.name):$_"
+            Write-Warning:"[*]Failed to dispose $($w.name):$_"
         }
     }
 }
@@ -30,6 +30,17 @@ $remotePort = 5514  # Changed to TCP port for better reliability with JSON
 # Create TCP client for more reliable JSON transmission
 $tcpClient = $null
 
+#Get the non-loopback ipv4 address without hardcoding the ip address
+
+$ip = Get-NetIPAddress -AddressFamily -IPv4 |
+     Where-Object{
+        $_.IPAddress -ne "127.0.0.1"
+        $_.InterfaceOperationalStatus -eq "Up"
+     }|
+     Select-Object -First 1 -ExpandProperty IPAddress
+
+Write-Host = ("[*] Host IP Address will be {0}" -f $ip)
+
 # Function to create TCP connection with retry logic
 function Connect-ToLogstash{
     $maxRetries =3
@@ -42,7 +53,7 @@ function Connect-ToLogstash{
             }
             $script:tcpClient = New-Object System.Net.Sockets.TcpClient
             $script:tcpClient.connect($remoteHost, $remotePort)
-            Write-Host "Connected to logstash at ${remoteHost}:${remotePort}"
+            Write-Host "[*] Connected to logstash at ${remoteHost}:${remotePort}"
             return $true
         }
 
@@ -102,7 +113,8 @@ function global:Send-Event{
         $eventObj["host.os.type"] ="windows"
         $eventObj["log_name"] = if ($evt.Logname) {$evt.Logname} else {$logName}
         $eventObj["winlog"]["computer_name"] = $xml.Event.System.Computer
-        $eventObj["host.ip"] = "192.168.186.130"
+        #$eventObj["host.ip"] = "192.168.186.130"
+        $eventObj["host.ip"] = $ip
     
         $eventJson =  $eventObj | ConvertTo-Json -Depth 10 -Compress
         #$syslogMsg = "<$priority>$($eventObj.'@timestamp') $($eventObj.computer_name) $($eventObj.log_name): $eventJson `n"
@@ -125,7 +137,7 @@ function global:Send-Event{
 
     if (-not $script:tcpClient -or -not $script:tcpClient.Connected) {
             if (-not (Connect-ToLogstash)) {
-                Write-Warning "Cannot establish connection to Logstash"
+                Write-Warning "[*]Cannot establish connection to Logstash"
                 return
             }
         }
@@ -188,7 +200,7 @@ try{
 
     }
 
-    Write-Host "Successfully started monitoring Windows events in real-time"
+    Write-Host "[*] Successfully started monitoring Windows events in real-time"
 
 }
 
@@ -197,17 +209,17 @@ catch{
     exit 1
 }
 
-Write-Host "Forwarding event logs to ${remoteHost}:${remotePort} via TCP with structured JSON..."
-Write-Host "Initial events sent from: Security, Application, System logs"
-Write-Host "Real-time monitoring: Security, Application and System logs"
-Write-Host "Press Ctrl+C to stop"
+Write-Host "[*] Forwarding event logs to ${remoteHost}:${remotePort} via TCP with structured JSON..."
+Write-Host "[*] Initial events sent from: Security, Application, System logs"
+Write-Host "[*] Real-time monitoring: Security, Application and System logs"
+Write-Host "[*] Press Ctrl+C to stop"
 
 
 
 
 
 $cleanup = {
-    Write-Host "`nShutting down..."
+    Write-Host "`n[*] Shutting down..."
 
     $watchers = Get-Variable -Scope Script -Name 'watcher*'
 
@@ -234,7 +246,7 @@ $cleanup = {
         catch { }
     }
     
-    Write-Host "Cleanup completed."
+    Write-Host "[*] Cleanup completed."
 }
 
 # Register cleanup on Ctrl+C
@@ -254,7 +266,7 @@ try {
                 Write-Warning "Connection lost. Attempting to reconnect..."
                 Connect-ToLogstash | Out-Null
             } else {
-                Write-Host "Health check: Connection OK, monitoring active ($(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'))"
+                Write-Host "[*] Health check: Connection OK, monitoring active ($(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'))"
             }
             $lastHealthCheck = Get-Date
         }
