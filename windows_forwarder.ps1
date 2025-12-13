@@ -54,6 +54,7 @@ function Connect-ToLogstash{
             $script:tcpClient = New-Object System.Net.Sockets.TcpClient
             $script:tcpClient.connect($remoteHost, $remotePort)
             Write-Host "[*] Connected to logstash at ${remoteHost}:${remotePort}"
+            Write-Host ""
             return $true
         }
 
