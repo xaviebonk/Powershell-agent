@@ -225,7 +225,7 @@ function Get-Watcher{
     Write-Host "[*] Initial events sent from: Security, Application, System logs"
     Write-Host "[*] Real-time monitoring: Security, Application and System logs"
     Write-Host "[*] Press Ctrl+C to stop"
-    return $True
+   
 
 }
 
