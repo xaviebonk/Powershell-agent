@@ -22,6 +22,7 @@ if (-not (Get-Module -ListAvailable -Name WriteAscii)) {
 Import-Module WriteAscii
 
 Write-Ascii "Event-Forwarder"
+Write-Host ""
 
 $remoteHost = "192.168.186.131" # <-- Destination computer (collector)
 $remotePort = 5514  # Changed to TCP port for better reliability with JSON
