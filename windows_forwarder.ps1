@@ -39,7 +39,7 @@ $ip = Get-NetIPAddress -AddressFamily IPv4 |
      }|
      Select-Object -First 1 -ExpandProperty IPAddress
 
-Write-Host = ("[*] Host IP Address will be {0}" -f $ip)
+Write-Host ("[*] Host IP Address will be {0}" -f $ip)
 
 # Function to create TCP connection with retry logic
 function Connect-ToLogstash{
