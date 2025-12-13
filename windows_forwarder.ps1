@@ -13,6 +13,16 @@ foreach ($w in $watchers){
         }
     }
 }
+
+#WriteAscii
+if (-not (Get-Module -ListAvailable -Name WriteAscii)) {
+    
+    Install-Module -Name WriteAscii -Scope CurrentUser -Force
+}
+Import-Module WriteAscii
+
+Write-Ascii "Event-Forwarder"
+
 $remoteHost = "192.168.186.131" # <-- Destination computer (collector)
 $remotePort = 5514  # Changed to TCP port for better reliability with JSON
 
