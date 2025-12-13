@@ -32,7 +32,7 @@ $tcpClient = $null
 
 #Get the non-loopback ipv4 address without hardcoding the ip address
 
-$ip = Get-NetIPAddress -AddressFamily -IPv4 |
+$ip = Get-NetIPAddress -AddressFamily IPv4 |
      Where-Object{
         $_.IPAddress -ne "127.0.0.1"
         $_.InterfaceOperationalStatus -eq "Up"
