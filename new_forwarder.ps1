@@ -194,9 +194,9 @@ $send_event ={
 function Get-Watcher{
 
     $Log_List = New-Object System.Collections.Generic.List[string]
-    $Log_List.Add("Application")
+    #$Log_List.Add("Application")
     #$Log_List.Add("System")
-    #$Log_List.Add("Security")
+    $Log_List.Add("Security")
 
 
 
@@ -248,9 +248,12 @@ switch ($Method) {
         )#>
         foreach($log in $logsToMonitor){
             $logNameFromPath = [System.IO.Path]::GetFileNameWithoutExtension($log)
-            Get-WinEvent -Path $log -ErrorAction Stop | ForEach-Object {
-                Send-Event $_ $logNameFromPath
+
+            foreach ($evt in Get-WinEvent -Path $log -ErrorAction Stop){
+                Send-Event $evt $logNameFromPath
+                Start-Sleep -Milliseconds 10
             }
+            
             Write-Host "[*] Sent all events from $logNameFromPath"
 
         }
