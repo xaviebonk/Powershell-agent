@@ -146,7 +146,7 @@ function global:Send-Event{
 
     if (-not $script:tcpClient -or -not $script:tcpClient.Connected) {
             if (-not (Connect-ToLogstash)) {
-                Write-Warning "[*]Cannot establish connection to Logstash"
+                Write-Warning "[*] Cannot establish connection to Logstash"
                 return
             }
         }
@@ -157,7 +157,7 @@ function global:Send-Event{
     $stream.Write($bytes, 0, $bytes.Length)
     $stream.Flush()
         
-    Write-Host "Sent Event ID $($evt.Id) from $($eventObj.log_name) - $($bytes.Length) bytes ($(Get-Date -Format 'HH:mm:ss'))"
+    Write-Host "[*] Sent Event ID $($evt.Id) from $($eventObj.log_name) - $($bytes.Length) bytes ($(Get-Date -Format 'HH:mm:ss'))"
         
 
 }
@@ -170,24 +170,24 @@ $send_event ={
 
     try{
         Send-Event $record $record.LogName
-        Write-Host "Event successfully forwarded to remote host"
+        #Write-Host "Event successfully forwarded to remote host"
     }
 
     catch{
-        Write-Warning "Failed to send event ID $($record.Id) from log $($record.LogName): $($_.Exception.Message)"
+        Write-Warning "[*] Failed to send event ID $($record.Id) from log $($record.LogName): $($_.Exception.Message)"
 
     }
 
-    Write-Host "New Event Detected"
-    Write-Host "Log:$($record.LogName)"
+    #Write-Host "New Event Detected"
+    #Write-Host "Log:$($record.LogName)"
 
-    try{
+    <#try{
         Write-Host "Message: $($record.FormatDescription())"
     }
 
     catch{
         Write-Host "Mesage: <XML format -see structured data>"
-    }
+    }#>
 }
 
 
