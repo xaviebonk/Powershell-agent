@@ -229,50 +229,6 @@ function Get-Watcher{
 
 }
 
-
-$script:HostIP = Get-HostIPAddress
-
-switch ($Method) {
-    "disk" {
-        Write-Host "[*] Running disk method"
-        Connect-ToLogstash | Out-Null
-        #Get-HostIPAddress
-        $logsToMonitor = @(
-        "C:\Windows\System32\winevt\Logs\Security.evtx"
-        )
-
-        <#$logsToMonitor = @(
-        "C:\Windows\System32\winevt\Logs\Security.evtx",
-        "C:\Windows\System32\winevt\Logs\Application.evtx",
-        "C:\Windows\System32\winevt\Logs\System.evtx"
-        )#>
-        foreach($log in $logsToMonitor){
-            $logNameFromPath = [System.IO.Path]::GetFileNameWithoutExtension($log)
-
-            Get-WinEvent -Path $log -ErrorAction Stop | ForEach-Object {
-                Send-Event $_ $logNameFromPath
-            }
-
-            <#foreach ($evt in Get-WinEvent -Path $log -ErrorAction Stop){
-                Send-Event $evt $logNameFromPath
-                Start-Sleep -Seconds 1
-            }#>
-            
-            Write-Host "[*] Sent all events from $logNameFromPath"
-
-        }
-
-    }
- 
-    "memory" {
-        Write-Host "[*] Running memory method"
-        #Get-HostIPAddress
-        Get-Watcher
-
-    }
-}
-
-
 $cleanup = {
     Write-Host "`n[*] Shutting down..."
 
@@ -303,6 +259,60 @@ $cleanup = {
     
     Write-Host "[*] Cleanup completed."
 }
+
+
+
+
+$script:HostIP = Get-HostIPAddress
+
+switch ($Method) {
+    "disk" {
+        Write-Host "[*] Running disk method"
+        Connect-ToLogstash | Out-Null
+        #Get-HostIPAddress
+        $logsToMonitor = @(
+        "C:\Windows\System32\winevt\Logs\Security.evtx"
+        )
+
+        <#$logsToMonitor = @(
+        "C:\Windows\System32\winevt\Logs\Security.evtx",
+        "C:\Windows\System32\winevt\Logs\Application.evtx",
+        "C:\Windows\System32\winevt\Logs\System.evtx"
+        )#>
+        foreach($log in $logsToMonitor){
+            $logNameFromPath = [System.IO.Path]::GetFileNameWithoutExtension($log)
+
+            Get-WinEvent -Path $log -ErrorAction Stop | ForEach-Object {
+                Send-Event $_ $logNameFromPath
+            }
+
+            <#foreach ($evt in Get-WinEvent -Path $log -ErrorAction Stop){
+                Send-Event $evt $logNameFromPath
+                Start-Sleep -Seconds 1
+            }#>
+            Write-Host ""
+            Write-Host "[*] Sent all events from $logNameFromPath"
+
+        }
+
+        
+        Write-Host "[*] Disk replay completed. Exiting..."
+        Write-Host "[*] Happy Threat Hunting!"
+        & $cleanup
+        exit 0
+
+    }
+ 
+    "memory" {
+        Write-Host "[*] Running memory method"
+        #Get-HostIPAddress
+        Get-Watcher
+
+    }
+}
+
+
+
 
 # Register cleanup on Ctrl+C
 Register-EngineEvent -SourceIdentifier Powershell-Exiting -Action $cleanup | Out-Null
