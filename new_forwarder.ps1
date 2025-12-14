@@ -128,7 +128,7 @@ function global:Send-Event{
         $eventJson =  $eventObj | ConvertTo-Json -Depth 10 -Compress
         #$syslogMsg = "<$priority>$($eventObj.'@timestamp') $($eventObj.computer_name) $($eventObj.log_name): $eventJson `n"
 
-        Write-Output $eventJson
+        #Write-Output $eventJson
         
 
     }
@@ -235,6 +235,7 @@ $script:HostIP = Get-HostIPAddress
 switch ($Method) {
     "disk" {
         Write-Host "[*] Running disk method"
+        Connect-ToLogstash
         #Get-HostIPAddress
         $logsToMonitor = @(
         "C:\Windows\System32\winevt\Logs\Security.evtx",
