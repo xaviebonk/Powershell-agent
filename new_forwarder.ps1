@@ -246,7 +246,7 @@ switch ($Method) {
             Get-WinEvent -Path $log -ErrorAction Stop | ForEach-Object {
                 Send-Event $_ $logNameFromPath
             }
-            Write-Host "[*] Sent $($Events.Count) events from $logNameFromPath"
+            Write-Host "[*] Sent all events from $logNameFromPath"
 
         }
 
@@ -259,12 +259,6 @@ switch ($Method) {
 
     }
 }
-
-#Get the non-loopback ipv4 address without hardcoding the ip address
-
-
-
-
 
 
 $cleanup = {
