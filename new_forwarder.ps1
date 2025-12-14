@@ -249,10 +249,14 @@ switch ($Method) {
         foreach($log in $logsToMonitor){
             $logNameFromPath = [System.IO.Path]::GetFileNameWithoutExtension($log)
 
-            foreach ($evt in Get-WinEvent -Path $log -ErrorAction Stop){
+            Get-WinEvent -Path $log -ErrorAction Stop | ForEach-Object {
+                Send-Event $_ $logNameFromPath
+            }
+
+            <#foreach ($evt in Get-WinEvent -Path $log -ErrorAction Stop){
                 Send-Event $evt $logNameFromPath
                 Start-Sleep -Seconds 1
-            }
+            }#>
             
             Write-Host "[*] Sent all events from $logNameFromPath"
 
