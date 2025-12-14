@@ -195,8 +195,8 @@ function Get-Watcher{
 
     $Log_List = New-Object System.Collections.Generic.List[string]
     $Log_List.Add("Application")
-    $Log_List.Add("System")
-    $Log_List.Add("Security")
+    #$Log_List.Add("System")
+    #$Log_List.Add("Security")
 
 
 
@@ -238,10 +238,14 @@ switch ($Method) {
         Connect-ToLogstash
         #Get-HostIPAddress
         $logsToMonitor = @(
+        "C:\Windows\System32\winevt\Logs\Security.evtx"
+        )
+
+        <#$logsToMonitor = @(
         "C:\Windows\System32\winevt\Logs\Security.evtx",
         "C:\Windows\System32\winevt\Logs\Application.evtx",
         "C:\Windows\System32\winevt\Logs\System.evtx"
-        )
+        )#>
         foreach($log in $logsToMonitor){
             $logNameFromPath = [System.IO.Path]::GetFileNameWithoutExtension($log)
             Get-WinEvent -Path $log -ErrorAction Stop | ForEach-Object {
