@@ -235,7 +235,7 @@ $script:HostIP = Get-HostIPAddress
 switch ($Method) {
     "disk" {
         Write-Host "[*] Running disk method"
-        Connect-ToLogstash
+        Connect-ToLogstash | Out-Null
         #Get-HostIPAddress
         $logsToMonitor = @(
         "C:\Windows\System32\winevt\Logs\Security.evtx"
@@ -251,7 +251,7 @@ switch ($Method) {
 
             foreach ($evt in Get-WinEvent -Path $log -ErrorAction Stop){
                 Send-Event $evt $logNameFromPath
-                Start-Sleep -Milliseconds 10
+                Start-Sleep -Seconds 1
             }
             
             Write-Host "[*] Sent all events from $logNameFromPath"
