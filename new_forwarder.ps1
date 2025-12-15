@@ -295,10 +295,24 @@ function Get-Watcher{
             ${Log_List[$i]_query} = New-Object System.Diagnostics.Eventing.Reader.EventLogQuery($Log_List[$i], [System.Diagnostics.Eventing.Reader.PathType]::LogName)
             $watcher = New-Object System.Diagnostics.Eventing.Reader.EventLogWatcher ${Log_List[$i]_query}
             if ($Log_List[$i] -eq "Security"){
-                Register-ObjectEvent -InputObject $watcher -EventName EventRecordWritten -Action { $send_event.Invoke($args[0], $args[1], "Security") } | Out-Null
+
+                $action = {
+                    param($sender, $e)
+                    # $e.EventRecord contains the actual event
+                    $eventRecord = $e.EventRecord
+                    Send-Event -evt $eventRecord -logName $eventRecord.LogName -EventSource "Security"}
+
+                Register-ObjectEvent -InputObject $watcher -EventName EventRecordWritten -Action $action | Out-Null
             }
             else{
-                Register-ObjectEvent -InputObject $watcher -EventName EventRecordWritten -Action { $send_event.Invoke($args[0], $args[1], "Sysmon") } | Out-Null
+
+                $action = {
+                    param($sender, $e)
+                    # $e.EventRecord contains the actual event
+                    $eventRecord = $e.EventRecord
+                    Send-Event -evt $eventRecord -logName $eventRecord.LogName -EventSource "Sysmon"}
+
+                Register-ObjectEvent -InputObject $watcher -EventName EventRecordWritten -Action $action | Out-Null
             }
             $watcher.Enabled = $true
             Set-Variable -Scope Script -Name ("watcher{0}" -f $i) -Value $watcher
