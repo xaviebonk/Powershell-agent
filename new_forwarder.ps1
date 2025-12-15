@@ -421,9 +421,27 @@ switch ($Method) {
     }
  
     "memory" {
+
         Write-Host "[*] Running memory method"
-        #Get-HostIPAddress
+    
+        if ("Security" -in $EventSources) {
+            $connected = Connect-ToLogstash -remoteHost "192.168.186.131" -remotePort 5514 -EventSource "Security"
+            if (-not $connected) {
+                Write-Error "[*] Failed to establish initial Security connection"
+                exit 1
+            }
+        }
+        
+        if ("Sysmon" -in $EventSources) {
+            $connected = Connect-ToLogstash -remoteHost "192.168.186.131" -remotePort 5000 -EventSource "Sysmon"
+            if (-not $connected) {
+                Write-Error "[*] Failed to establish initial Sysmon connection"
+                exit 1
+            }
+        }
+        
         Get-Watcher -EventSources $EventSources
+    
 
     }
 }
