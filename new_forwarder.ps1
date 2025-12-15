@@ -1,7 +1,12 @@
 param(
-    [Parameter(Mandatory)]
+    [Parameter(Mandatory=$false)]
     [ValidateSet("disk","memory")]
-    [string]$Method
+    [string]$Method="memory",
+
+    [Parameter(Mandatory=$false)]
+    [ValidateSet("Security","Sysmon")]
+    [string[]]$EventSources=@("Security","Sysmon")
+
 )
 
 Get-EventSubscriber | Unregister-Event -Force
@@ -30,11 +35,10 @@ Import-Module WriteAscii
 Write-Ascii "Event-Forwarder"
 Write-Host ""
 
-$remoteHost = "192.168.186.131" # <-- Destination computer (collector)
-$remotePort = 5514  # Changed to TCP port for better reliability with JSON
+#$remoteHost = "192.168.186.131" # <-- Destination computer (collector)
+#$remotePort = 5514  # Changed to TCP port for better reliability with JSON
 
-# Create TCP client for more reliable JSON transmission
-$tcpClient = $null
+
 
 function Get-HostIPAddress{ 
 
@@ -51,34 +55,69 @@ function Get-HostIPAddress{
 
 # Function to create TCP connection with retry logic
 function Connect-ToLogstash{
+
+    param($remoteHost,$remotePort,$EventSource)
     $maxRetries =3
     $retryDelay =2
 
-    for ($i=0;$i -lt $maxRetries ; $i++){
-        try{
-            if ($script:tcpClient){
-                $script:tcpClient.Close()
-            }
-            $script:tcpClient = New-Object System.Net.Sockets.TcpClient
-            $script:tcpClient.connect($remoteHost, $remotePort)
-            Write-Host "[*] Connected to logstash at ${remoteHost}:${remotePort}"
-            Write-Host ""
-            return $true
-        }
+    if ("Security" -eq $EventSource){
 
-        catch{
-            Write-Warning "Connnection attempt $($i+1) failed: $($_.Exception.Message)"
-            if($i -lt $maxRetries -1){
-                Start-Sleep -Seconds $retryDelay
+        for ($i=0;$i -lt $maxRetries ; $i++){
+            try{
+                if ($script:tcpClient_Security){
+                    $script:tcpClient_Security.Close()
+                }
+                $script:tcpClient_Security = New-Object System.Net.Sockets.TcpClient
+                $script:tcpClient_Security.connect($remoteHost, $remotePort)
+                Write-Host "[*] Connected to logstash at ${remoteHost}:${remotePort}"
+                Write-Host "[*] Forwarding Security events ..."
+                Write-Host ""
+                return $true
+            }
+
+            catch{
+                Write-Warning "Connnection attempt $($i+1) failed: $($_.Exception.Message)"
+                if($i -lt $maxRetries -1){
+                    Start-Sleep -Seconds $retryDelay
+                }
             }
         }
+        return $false
     }
-    return $false
+
+    elseif ("Sysmon" -eq $EventSource){
+
+        for ($i=0;$i -lt $maxRetries ; $i++){
+            try{
+                if ($script:tcpClient_Sysmon){
+                    $script:tcpClient_Sysmon.Close()
+                }
+                $script:tcpClient_Sysmon = New-Object System.Net.Sockets.TcpClient
+                $script:tcpClient_Sysmon.connect($remoteHost, $remotePort)
+                Write-Host "[*] Connected to logstash at ${remoteHost}:${remotePort}"
+                Write-Host "[*] Forwarding Sysmon events ..."
+                Write-Host ""
+                return $true
+            }
+
+            catch{
+                Write-Warning "Connnection attempt $($i+1) failed: $($_.Exception.Message)"
+                if($i -lt $maxRetries -1){
+                    Start-Sleep -Seconds $retryDelay
+                }
+            }
+        }
+        return $false
+    }
+
+    else{
+        return $false
+    }
 }
 
 
 function global:Send-Event{
-    param($evt,$logName="Unknown")
+    param($evt,$logName="Unknown",$EventSource)
 
     try{
 
@@ -111,25 +150,40 @@ function global:Send-Event{
             $i++
         }
 
-        # Calculate syslog priority
-
-       
-        $rawId = $evt.Id -replace ',', ''
-        $eventObj["event"]["code"]=[string]$rawId
-        $eventObj["@timestamp"] = $evt.TimeCreated.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-        $eventObj["event.time"] = $xml.Event.System.TimeCreated.SystemTime
-        #$eventObj["event.code"] = [int]$rawId
-        $eventObj["host.os.type"] ="windows"
-        $eventObj["log_name"] = if ($evt.Logname) {$evt.Logname} else {$logName}
-        $eventObj["winlog"]["computer_name"] = $xml.Event.System.Computer
-        #$eventObj["host.ip"] = "192.168.186.130"
-        $eventObj["host.ip"] = $script:HostIP
-    
-        $eventJson =  $eventObj | ConvertTo-Json -Depth 10 -Compress
-        #$syslogMsg = "<$priority>$($eventObj.'@timestamp') $($eventObj.computer_name) $($eventObj.log_name): $eventJson `n"
-
-        #Write-Output $eventJson
+        if ($EventSource -eq "Security"){
+            $rawId = $evt.Id -replace ',', ''
+            $eventObj["event"]["code"]=[string]$rawId
+            $eventObj["@timestamp"] = $evt.TimeCreated.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+            $eventObj["event.time"] = $xml.Event.System.TimeCreated.SystemTime
+            #$eventObj["event.code"] = [int]$rawId
+            $eventObj["host.os.type"] ="windows"
+            $eventObj["log_name"] = if ($evt.Logname) {$evt.Logname} else {$logName}
+            $eventObj["winlog"]["computer_name"] = $xml.Event.System.Computer
+            #$eventObj["host.ip"] = "192.168.186.130"
+            $eventObj["host.ip"] = $script:HostIP
         
+            $eventJson =  $eventObj | ConvertTo-Json -Depth 10 -Compress
+            #$syslogMsg = "<$priority>$($eventObj.'@timestamp') $($eventObj.computer_name) $($eventObj.log_name): $eventJson `n"
+
+            #Write-Output $eventJson
+
+        }
+
+        else{
+            $rawId = $evt.Id -replace ',', ''
+            $eventObj["winlog"]["event_id"]=[string]$rawId
+            #$eventObj["event"]["code"]=[string]$rawId
+            $eventObj["@timestamp"] = $evt.TimeCreated.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+            $eventObj["event.time"] = $xml.Event.System.TimeCreated.SystemTime
+            $eventObj["host.os.type"] ="windows"
+            $eventObj["log_name"] = if ($evt.Logname) {$evt.Logname} else {$logName}
+            $eventObj["winlog"]["computer_name"] = $xml.Event.System.Computer
+            $eventObj["host.ip"] = $script:HostIP
+        
+            $eventJson =  $eventObj | ConvertTo-Json -Depth 10 -Compress
+            #$syslogMsg = "<$priority>$($eventObj.'@timestamp') $($eventObj.computer_name) $($eventObj.log_name): $eventJson `n"
+
+        }
 
     }
 
@@ -144,32 +198,51 @@ function global:Send-Event{
     
     }
 
-    if (-not $script:tcpClient -or -not $script:tcpClient.Connected) {
-            if (-not (Connect-ToLogstash)) {
-                Write-Warning "[*] Cannot establish connection to Logstash"
-                return
+    switch($EventSource){
+        "Security"{
+            if (-not $script:tcpClient_Security -or -not $script:tcpClient_Security.Connected) {
+                if (-not (Connect-ToLogstash -remoteHost "192.168.186.131" -remotePort 5514 -EventSource "Security")) {
+                    Write-Warning "[*] Cannot establish connection to Logstash"
+                    return
+                }
             }
+
+            #$bytes = [System.Text.Encoding]::UTF8.GetBytes($eventJson)
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes($eventJson + "`n")
+            $stream = $script:tcpClient_Security.GetStream()
+            $stream.Write($bytes, 0, $bytes.Length)
+            $stream.Flush()
+        
+            Write-Host "[*] Sent Event ID $($evt.Id) from $($eventObj.log_name) - $($bytes.Length) bytes ($(Get-Date -Format 'HH:mm:ss'))"
         }
+        "Sysmon"{
+            if (-not $script:tcpClient_Sysmon -or -not $script:tcpClient_Sysmon.Connected) {
+                if (-not (Connect-ToLogstash -remoteHost "192.168.186.131" -remotePort 5000 -EventSource "Sysmon")) {
+                    Write-Warning "[*] Cannot establish connection to Logstash"
+                    return
+                }
+            }
 
-    #$bytes = [System.Text.Encoding]::UTF8.GetBytes($eventJson)
-    $bytes = [System.Text.Encoding]::UTF8.GetBytes($eventJson + "`n")
-    $stream = $script:tcpClient.GetStream()
-    $stream.Write($bytes, 0, $bytes.Length)
-    $stream.Flush()
+            #$bytes = [System.Text.Encoding]::UTF8.GetBytes($eventJson)
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes($eventJson + "`n")
+            $stream = $script:tcpClient_Sysmon.GetStream()
+            $stream.Write($bytes, 0, $bytes.Length)
+            $stream.Flush()
         
-    Write-Host "[*] Sent Event ID $($evt.Id) from $($eventObj.log_name) - $($bytes.Length) bytes ($(Get-Date -Format 'HH:mm:ss'))"
+            Write-Host "[*] Sent Event ID $($evt.Id) from $($eventObj.log_name) - $($bytes.Length) bytes ($(Get-Date -Format 'HH:mm:ss'))"
+        }
+    }
         
-
 }
 
 
 $send_event ={
-    param($sender,$eventArgs)
+    param($sender,$eventArgs,$EventSource)
 
     $record =  $eventArgs.EventRecord
 
     try{
-        Send-Event $record $record.LogName
+        Send-Event $record $record.LogName $EventSource
         #Write-Host "Event successfully forwarded to remote host"
     }
 
@@ -193,10 +266,24 @@ $send_event ={
 
 function Get-Watcher{
 
+    param([string[]]$EventSources)
+
     $Log_List = New-Object System.Collections.Generic.List[string]
+    foreach ($source in $EventSources){
+        switch ($source){
+            "Security"{
+                $Log_List.Add("Security")
+            }
+            "Sysmon"{
+                $Log_List.Add("Microsoft-Windows-Sysmon/Operational")
+            }
+        }
+    }
+  
     #$Log_List.Add("Application")
     #$Log_List.Add("System")
-    $Log_List.Add("Security")
+    #$Log_List.Add("Security")
+    #$Log_List.Add("Microsoft-Windows-Sysmon/Operational")
 
 
 
@@ -206,7 +293,12 @@ function Get-Watcher{
         {
             ${Log_List[$i]_query} = New-Object System.Diagnostics.Eventing.Reader.EventLogQuery($Log_List[$i], [System.Diagnostics.Eventing.Reader.PathType]::LogName)
             $watcher = New-Object System.Diagnostics.Eventing.Reader.EventLogWatcher ${Log_List[$i]_query}
-            Register-ObjectEvent -InputObject $watcher -EventName EventRecordWritten -Action $send_event | Out-Null
+            if ($Log_List[$i] -eq "Security"){
+                Register-ObjectEvent -InputObject $watcher -EventName EventRecordWritten -Action { $send_event.Invoke($args[0], $args[1], "Security") } | Out-Null
+            }
+            else{
+                Register-ObjectEvent -InputObject $watcher -EventName EventRecordWritten -Action { $send_event.Invoke($args[0], $args[1], "Sysmon") } | Out-Null
+            }
             $watcher.Enabled = $true
             Set-Variable -Scope Script -Name ("watcher{0}" -f $i) -Value $watcher
 
@@ -221,9 +313,24 @@ function Get-Watcher{
         exit 1
     }
 
-    Write-Host "[*] Forwarding event logs to ${remoteHost}:${remotePort} via TCP with structured JSON..."
-    Write-Host "[*] Initial events sent from: Security, Application, System logs"
-    Write-Host "[*] Real-time monitoring: Security, Application and System logs"
+    foreach ($source in $EventSources){
+        switch ($source){
+            "Security"{
+                $remoteHost ="192.168.186.131"
+                $remotePort =5514
+                Write-Host "[*] Forwarding event logs to ${remoteHost}:${remotePort} via TCP with structured JSON..."
+                Write-Host "[*] Real-time monitoring: Microsoft Security Event Logs"
+            }
+            "Sysmon"{
+                $remoteHost ="192.168.186.131"
+                $remotePort =5000
+                Write-Host "[*] Forwarding event logs to ${remoteHost}:${remotePort} via TCP with structured JSON..."
+                Write-Host "[*] Real-time monitoring: Sysmon logs"
+            }
+        }
+    }
+
+   
     Write-Host "[*] Press Ctrl+C to stop"
    
 
@@ -245,14 +352,20 @@ $cleanup = {
         }
     }
     
-    
     # Unregister events
     Get-EventSubscriber | Unregister-Event -Force
     
-    # Close TCP connection
-    if ($script:tcpClient) {
+    # Close TCP connnections
+
+    if ($script:tcpClient_Security) {
         try {
-            $script:tcpClient.Close()
+            $script:tcpClient_Security.Close()
+        }
+        catch { }
+    }
+    if ($script:tcpClient_Sysmon) {
+        try {
+            $script:tcpClient_Sysmon.Close()
         }
         catch { }
     }
@@ -261,29 +374,33 @@ $cleanup = {
 }
 
 
-
-
 $script:HostIP = Get-HostIPAddress
 
 switch ($Method) {
     "disk" {
         Write-Host "[*] Running disk method"
-        Connect-ToLogstash | Out-Null
-        #Get-HostIPAddress
-        $logsToMonitor = @(
-        "C:\Windows\System32\winevt\Logs\Security.evtx"
-        )
-
-        <#$logsToMonitor = @(
-        "C:\Windows\System32\winevt\Logs\Security.evtx",
-        "C:\Windows\System32\winevt\Logs\Application.evtx",
-        "C:\Windows\System32\winevt\Logs\System.evtx"
-        )#>
+        $logsToMonitor =@()
+        if ("Security" -in $EventSources) {
+            Connect-ToLogstash -remoteHost "192.168.186.131" -remotePort 5514 -EventSource "Security" | Out-Null
+            $logsToMonitor += "C:\Windows\System32\winevt\Logs\Security.evtx"
+        }
+        if ("Sysmon" -in $EventSources){
+            Connect-ToLogstash -remoteHost "192.168.186.131" -remotePort 5000 -EventSource "Sysmon" | Out-Null
+            $logsToMonitor += "C:\Windows\System32\winevt\Logs\Microsoft-Windows-Sysmon%4Operational.evtx"
+        }
+        
         foreach($log in $logsToMonitor){
             $logNameFromPath = [System.IO.Path]::GetFileNameWithoutExtension($log)
+            if ($logNameFromPath -eq "Security"){
+                $eventsource = "Security"
+            }
+            else{
+                $eventsource = "Sysmon"
+            }
+            
 
             Get-WinEvent -Path $log -ErrorAction Stop | ForEach-Object {
-                Send-Event $_ $logNameFromPath
+                Send-Event $_ $logNameFromPath $eventsource
             }
 
             <#foreach ($evt in Get-WinEvent -Path $log -ErrorAction Stop){
@@ -306,7 +423,7 @@ switch ($Method) {
     "memory" {
         Write-Host "[*] Running memory method"
         #Get-HostIPAddress
-        Get-Watcher
+        Get-Watcher -EventSources $EventSources
 
     }
 }
@@ -327,12 +444,23 @@ try {
         
         # Periodic health check
         if ((Get-Date) - $lastHealthCheck -gt [TimeSpan]::FromSeconds($healthCheckInterval)) {
-            if (-not $script:tcpClient -or -not $script:tcpClient.Connected) {
-                Write-Warning "Connection lost. Attempting to reconnect..."
-                Connect-ToLogstash | Out-Null
-            } else {
-                Write-Host "[*] Health check: Connection OK, monitoring active ($(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'))"
+            if ("Security" -in $EventSources){
+                if (-not $script:tcpClient_Security -or -not $script:tcpClient_Security.Connected) {
+                    Write-Warning "Security log connection lost. Attempting to reconnect..."
+                    Connect-ToLogstash -remoteHost "192.168.186.131" -remotePort 5514 -EventSource "Security" | Out-Null
+                } else {
+                    Write-Host "[*] Health check: Security log connection OK, monitoring active ($(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'))"
+                }
             }
+            if("Sysmon" -in $EventSources){
+                if (-not $script:tcpClient_Sysmon -or -not $script:tcpClient_Sysmon.Connected) {
+                    Write-Warning "Sysmon log connection lost. Attempting to reconnect..."
+                    Connect-ToLogstash -remoteHost "192.168.186.131" -remotePort 5000 -EventSource "Sysmon" | Out-Null
+                } else {
+                    Write-Host "[*] Health check: Sysmon log connection OK, monitoring active ($(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'))"
+                }
+            }
+            
             $lastHealthCheck = Get-Date
         }
     }
