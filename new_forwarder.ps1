@@ -38,7 +38,8 @@ Write-Host ""
 #$remoteHost = "192.168.186.131" # <-- Destination computer (collector)
 #$remotePort = 5514  # Changed to TCP port for better reliability with JSON
 
-
+$script:tcpClient_Security = $null
+$script:tcpClient_Sysmon = $null
 
 function Get-HostIPAddress{ 
 
