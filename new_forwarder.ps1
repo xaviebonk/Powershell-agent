@@ -154,6 +154,7 @@ function global:Send-Event{
         if ($EventSource -eq "Security"){
             $rawId = $evt.Id -replace ',', ''
             $eventObj["event"]["code"]=[string]$rawId
+            $eventObj["event"]["provider"] = "Microsoft-Windows-Security-Auditing"
             $eventObj["@timestamp"] = $evt.TimeCreated.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
             $eventObj["event.time"] = $xml.Event.System.TimeCreated.SystemTime
             #$eventObj["event.code"] = [int]$rawId
