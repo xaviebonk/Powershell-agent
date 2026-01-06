@@ -17,7 +17,20 @@ def send_line(sock, line):
         return
 
     # Wrap in JSON {"message": "<raw_line>"}
-    json_data = json.dumps({"message": line})
+    #json_data = json.dumps({"message": line})
+
+
+    # testing if host.os.type ccan be added in this manner
+    json_data = json.dumps({
+        "message": line,
+        "host":{
+            "os":{
+                "type":"linux"
+            }
+        }
+    })
+
+    print(f"[*] Sent: {json_data}")
 
     # Send over TCP
     sock.sendall((json_data + "\n").encode("utf-8"))  # newline separates messages
