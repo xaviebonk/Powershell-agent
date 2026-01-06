@@ -43,7 +43,7 @@ def main():
         with open(FILE_TO_SEND, "r") as f:
             for line in f:
                 send_line(sock, line)
-                time.sleep(DELAY_BETWEEN_LINES)
+                #time.sleep(DELAY_BETWEEN_LINES)
 
         print("[+] Done sending lines")
 
