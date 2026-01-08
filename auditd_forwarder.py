@@ -1,12 +1,52 @@
 import socket
 import json
 import time
+import sys
+import subprocess
+
+# Ensure pyfiglet is installed
+try:
+    import pyfiglet
+except ImportError:
+    print("[*] pyfiglet not found, installing...")
+    subprocess.check_call([
+        sys.executable, "-m", "pip", "install", "pyfiglet"
+    ])
+    import pyfiglet  # retry after install
+
+# ASCII Art Title
+text = "event-forwarder"
+ascii_art = pyfiglet.figlet_format(text, font="slant")
+
+print(ascii_art)
+
+
+file_type = input("Enter the type of log file to send (auditd/syslog/auth): ").strip().lower()
+
+match file_type:
+    case "auditd":
+        FILE_TO_SEND = "/var/log/audit/audit.log"
+        LOGSTASH_PORT = 5044
+    case "syslog":
+        FILE_TO_SEND = "/var/log/syslog"
+        LOGSTASH_PORT = 5045
+
+    case "auth":
+        FILE_TO_SEND = "/var/log/auth.log"
+        LOGSTASH_PORT  = 5046
+    case _:
+        print("Invalid log type. Defaulting to auditd.")
+        FILE_TO_SEND = "/var/log/audit/audit.log"
+        LOGSTASH_PORT = 5044
+
 
 #networking configuration 
 LOGSTASH_HOST = "192.168.186.131"  # Logstash IP
-LOGSTASH_PORT = 5044         # TCP input port
-FILE_TO_SEND = "/var/log/audit/audit.log"   # Your raw auditd log file
+#LOGSTASH_PORT = 5044         # TCP input port
+#FILE_TO_SEND = "/var/log/audit/audit.log"   # Your raw auditd log file
 DELAY_BETWEEN_LINES = 0.1    # Seconds between sending lines (optional)
+print("[*] The program by default will send auditd logs from /var/log/audit/audit.log to logstash")
+
 
 
 #Function to send JSON lines
