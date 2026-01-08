@@ -3,6 +3,7 @@ import json
 import time
 import sys
 import subprocess
+import re
 
 # Ensure pyfiglet is installed
 try:
@@ -50,7 +51,7 @@ print("[*] The program by default will send auditd logs from /var/log/audit/audi
 
 
 #Function to send JSON lines
-def send_line(sock, line):
+def send_line(sock, line, file_type):
     # Strip newlines
     line = line.strip()
     if not line:
@@ -58,10 +59,8 @@ def send_line(sock, line):
 
     # Wrap in JSON {"message": "<raw_line>"}
     #json_data = json.dumps({"message": line})
-
-
-    # testing if host.os.type ccan be added in this manner
-    json_data = json.dumps({
+    if file_type != "auditd":
+        json_data = json.dumps({
         "message": line,
         "host":{
             "os":{
@@ -69,6 +68,27 @@ def send_line(sock, line):
             }
         }
     })
+        
+    else:
+        match = re.search(r'syscall=([^\s]+)', line)
+        if match:
+            syscall = match.group(1)
+        else:
+            syscall = "syscall"
+        
+        json_data = json.dumps({
+                "message": line,
+                "auditd":{
+                    "log":{
+                        "syscall":syscall
+                    }
+                },
+                "host":{
+                    "os":{
+                        "type":"linux"
+                    }
+                }
+            })
 
     print(f"[*] Sent: {json_data}")
 
@@ -82,7 +102,7 @@ def main():
 
         with open(FILE_TO_SEND, "r") as f:
             for line in f:
-                send_line(sock, line)
+                send_line(sock, line, file_type)
                 #time.sleep(DELAY_BETWEEN_LINES)
 
         print("[+] Done sending lines")
