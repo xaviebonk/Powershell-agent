@@ -70,25 +70,36 @@ def send_line(sock, line, file_type):
     })
         
     else:
-        match = re.search(r'SYSCALL=([^\s]+)', line)
-        if match:
-            syscall = match.group(1)
+        target_syscall = re.search(r'SYSCALL=([^\s]+)', line)
+        removable_syscall = re.search(r'syscall=([^\s]+)', line)
+
+        if removable_syscall:
+            line_without_syscall = re.sub(r'\bsyscall=[^\s]+\b', '', line).strip()
+            syscall = target_syscall.group(1)
+
+            json_data = json.dumps({
+                            "message": line_without_syscall,
+                            "auditd":{
+                                "log":{
+                                    "syscall":syscall
+                                }
+                            },
+                            "host":{
+                                "os":{
+                                    "type":"linux"
+                                }
+                            }
+                        })
+
         else:
-            syscall = "syscall"
-        
-        json_data = json.dumps({
-                "message": line,
-                "auditd":{
-                    "log":{
-                        "syscall":syscall
+            json_data = json.dumps({
+                    "message": line,
+                    "host":{
+                        "os":{
+                            "type":"linux"
+                        }
                     }
-                },
-                "host":{
-                    "os":{
-                        "type":"linux"
-                    }
-                }
-            })
+                })
 
     print(f"[*] Sent: {json_data}")
 
