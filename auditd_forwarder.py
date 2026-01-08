@@ -70,7 +70,7 @@ def send_line(sock, line, file_type):
     })
         
     else:
-        match = re.search(r'syscall=([^\s]+)', line)
+        match = re.search(r'SYSCALL=([^\s]+)', line)
         if match:
             syscall = match.group(1)
         else:
