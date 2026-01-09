@@ -107,9 +107,15 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
                         }
                     },
                     "file":{
-                        
+
                     }
                 })
+            
+        if file_path:
+            json_dict = json.loads(json_data)
+            json_dict["file"]["path"] = file_path.group(1)
+            json_data = json.dumps(json_dict)
+
         if previous_sequence_number and possible_file_path != None:
             if previous_sequence_number == sequence_number.group(1):
                 json_dict = json.loads(json_data)
