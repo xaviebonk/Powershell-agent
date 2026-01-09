@@ -116,6 +116,10 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
             #json_dict["file"]["path"] = file_path.group(1)
             #json_data = json.dumps(json_dict)
 
+        if previous_sequence_number == sequence_number.group(1):
+            if possible_file_path:
+                file_path_to_keep  = possible_file_path
+
         if previous_sequence_number and possible_file_path != None:
             if previous_sequence_number == sequence_number.group(1):
                 json_dict = json.loads(json_data)
@@ -130,10 +134,13 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
 
     previous_sequence_number = sequence_number.group(1) if sequence_number else None
     if possible_file_path:
-        return previous_sequence_number, possible_file_path
-    else:
-        possible_file_path = file_path.group(1) if file_path else None
-        return previous_sequence_number, possible_file_path
+        if file_path_to_keep:
+            possible_file_path = file_path_to_keep
+        else:
+            possible_file_path = file_path.group(1) if file_path else None
+    
+    return previous_sequence_number, possible_file_path
+   
 
 # main sender loop 
 def main():
