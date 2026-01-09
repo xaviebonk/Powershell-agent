@@ -51,7 +51,7 @@ print("[*] The program by default will send auditd logs from /var/log/audit/audi
 
 
 #Function to send JSON lines
-def send_line(sock, line, file_type):
+def send_line(sock, line, file_type, previous_sequence_number, possible_file_path):
     # Strip newlines
     line = line.strip()
     if not line:
@@ -72,6 +72,9 @@ def send_line(sock, line, file_type):
     else:
         target_syscall = re.search(r'SYSCALL=([^\s]+)', line)
         removable_syscall = re.search(r'syscall=([^\s]+)', line)
+        sequence_number = re.search(r'audit\([^:]+:(\d+)\)', line)
+        file_path = re.search(r'type=PATH.*?\bname=([^\s]+)', line)
+        
 
         if removable_syscall:
             new_syscall = target_syscall.group(1)
@@ -89,6 +92,9 @@ def send_line(sock, line, file_type):
                                 "os":{
                                     "type":"linux"
                                 }
+                            },
+                            "file":{
+                                
                             }
                         })
 
@@ -101,20 +107,34 @@ def send_line(sock, line, file_type):
                         }
                     }
                 })
+        if previous_sequence_number and possible_file_path != None:
+            if previous_sequence_number == sequence_number.group(1):
+                json_dict = json.loads(json_data)
+                json_dict["file"]["path"] = possible_file_path
+                json_data = json.dumps(json_dict)
+
 
     print(f"[*] Sent: {json_data}")
 
     # Send over TCP
     sock.sendall((json_data + "\n").encode("utf-8"))  # newline separates messages
 
+    previous_sequence_number = sequence_number.group(1) if sequence_number else None
+    possible_file_path = file_path.group(1) if file_path else None
+
+    return previous_sequence_number, possible_file_path
+
 # main sender loop 
 def main():
     with socket.create_connection((LOGSTASH_HOST, LOGSTASH_PORT)) as sock:
         print(f"[+] Connected to Logstash at {LOGSTASH_HOST}:{LOGSTASH_PORT}")
 
+        previous_sequence_number = None
+        possible_file_path = None
+
         with open(FILE_TO_SEND, "r") as f:
             for line in f:
-                send_line(sock, line, file_type)
+                previous_sequence_number, possible_file_path = send_line(sock, line, file_type,previous_sequence_number, possible_file_path)
                 #time.sleep(DELAY_BETWEEN_LINES)
 
         print("[+] Done sending lines")
