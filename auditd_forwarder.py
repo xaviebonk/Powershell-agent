@@ -17,7 +17,7 @@ except ImportError:
 
 # ASCII Art Title
 text = "event-forwarder"
-ascii_art = pyfiglet.figlet_format(text, font="slant")
+ascii_art = pyfiglet.figlet_format(text, font="smslant")
 
 print(ascii_art)
 
