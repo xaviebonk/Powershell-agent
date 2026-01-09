@@ -144,7 +144,9 @@ def main():
         possible_file_path = None
 
         with open(FILE_TO_SEND, "r") as f:
-            for line in f:
+            print("[*] Reading file ...")
+            lines = f.readlines()
+            for line in reversed(lines):
                 previous_sequence_number, possible_file_path = send_line(sock, line, file_type,previous_sequence_number, possible_file_path)
                 #time.sleep(DELAY_BETWEEN_LINES)
 
