@@ -105,6 +105,9 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
                         "os":{
                             "type":"linux"
                         }
+                    },
+                    "file":{
+                        
                     }
                 })
         if previous_sequence_number and possible_file_path != None:
