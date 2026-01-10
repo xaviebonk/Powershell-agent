@@ -75,6 +75,7 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
         sequence_number = re.search(r'audit\([^:]+:(\d+)\)', line)
         #file_path = re.search(r'type=PATH.*?\bname=([^\s]+)', line)
         file_path = re.search(r'type=PATH.*?\bname="?([^"\s]+)"?', line)
+        ppid_match = re.search(r'\bppid=(\d+)\b', line)
 
         
 
@@ -99,6 +100,19 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
                                 
                             }
                         })
+        if ppid_match:
+            ppid = ppid_match.group(1)
+            result = subprocess.run(
+                ["ps", "-p", ppid, "-o", "comm=,exe="],
+                capture_output=True,
+                text=True
+            )
+
+            if result.returncode == 0 or not result.stdout.strip():
+                raise RuntimeError("Parent process not found")
+            
+            comm,exe = result.stdout.strip().split(None,1)
+
 
         else:
             json_data = json.dumps({
@@ -117,6 +131,21 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
             #json_dict = json.loads(json_data)
             #json_dict["file"]["path"] = file_path.group(1)
             #json_data = json.dumps(json_dict)
+        
+        
+        #add host.id,process.parent.executable,process.parent.name
+        json_dict = json.loads(json_data)
+        json_dict["host"]["id"] = "1234567890abcdef"
+        #ensure nested keys exist before assigning
+        if "process" not in json_dict:
+            json_dict["process"] = {}
+        if "parent" not in json_dict["process"]:
+            json_dict["process"]["parent"] = {}
+
+        json_dict["process"]["parent"]["executable"] = exe
+        json_dict["process"]["parent"]["name"] = comm
+        json_data = json.dumps(json_dict)
+
 
         if file_path and sequence_number:
             file_path_dict[sequence_number.group(1)] = file_path.group(1)
