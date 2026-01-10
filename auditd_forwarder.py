@@ -51,7 +51,7 @@ print("[*] The program by default will send auditd logs from /var/log/audit/audi
 
 
 #Function to send JSON lines
-def send_line(sock, line, file_type, previous_sequence_number, possible_file_path):
+def send_line(sock, line, file_type, previous_sequence_number, possible_file_path ,file_path_dict):
     # Strip newlines
     line = line.strip()
     if not line:
@@ -115,16 +115,21 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
             #json_dict = json.loads(json_data)
             #json_dict["file"]["path"] = file_path.group(1)
             #json_data = json.dumps(json_dict)
+        
+        if sequence_number.group(1) in file_path_dict:
+            json_dict = json.loads(json_data)
+            json_dict["file"]["path"] = file_path_dict[sequence_number.group(1)]
+            json_data = json.dumps(json_dict)
 
-        if previous_sequence_number == sequence_number.group(1):
-            if possible_file_path:
-                file_path_to_keep  = possible_file_path
+        #if previous_sequence_number == sequence_number.group(1):
+            #if possible_file_path:
+                #file_path_to_keep  = possible_file_path
 
-        if previous_sequence_number and possible_file_path != None:
-            if previous_sequence_number == sequence_number.group(1):
-                json_dict = json.loads(json_data)
-                json_dict["file"]["path"] = possible_file_path
-                json_data = json.dumps(json_dict)
+        #if previous_sequence_number and possible_file_path != None:
+            #if previous_sequence_number == sequence_number.group(1):
+                #json_dict = json.loads(json_data)
+                #json_dict["file"]["path"] = possible_file_path
+               # json_data = json.dumps(json_dict)
 
 
     print(f"[*] Sent: {json_data}")
@@ -133,11 +138,8 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
     sock.sendall((json_data + "\n").encode("utf-8"))  # newline separates messages
 
     previous_sequence_number = sequence_number.group(1) if sequence_number else None
-    if possible_file_path:
-        if file_path_to_keep:
-            possible_file_path = file_path_to_keep
-        else:
-            possible_file_path = file_path.group(1) if file_path else None
+    possible_file_path = file_path.group(1) if file_path else None
+    #possible_file_path = file_path.group(1) if file_path else None
     
     return previous_sequence_number, possible_file_path
    
@@ -147,14 +149,18 @@ def main():
     with socket.create_connection((LOGSTASH_HOST, LOGSTASH_PORT)) as sock:
         print(f"[+] Connected to Logstash at {LOGSTASH_HOST}:{LOGSTASH_PORT}")
 
-        previous_sequence_number = None
-        possible_file_path = None
+        #previous_sequence_number = None
+        #possible_file_path = None
+
+        file_path_dict = {}
+
 
         with open(FILE_TO_SEND, "r") as f:
             print("[*] Reading file ...")
             lines = f.readlines()
             for line in reversed(lines):
-                previous_sequence_number, possible_file_path = send_line(sock, line, file_type,previous_sequence_number, possible_file_path)
+                previous_sequence_number, possible_file_path = send_line(sock, line, file_type,previous_sequence_number, possible_file_path,file_path_dict)
+                file_path_dict["previous_sequence_number"] = possible_file_path
                 #time.sleep(DELAY_BETWEEN_LINES)
 
         print("[+] Done sending lines")
