@@ -115,11 +115,19 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
             #json_dict = json.loads(json_data)
             #json_dict["file"]["path"] = file_path.group(1)
             #json_data = json.dumps(json_dict)
+
+        if file_path and sequence_number:
+            file_path_dict[sequence_number.group(1)] = file_path.group(1)
         
-        if sequence_number.group(1) in file_path_dict:
+        if sequence_number and sequence_number.group(1) in file_path_dict:
             json_dict = json.loads(json_data)
             json_dict["file"]["path"] = file_path_dict[sequence_number.group(1)]
             json_data = json.dumps(json_dict)
+
+        #if sequence_number.group(1) in file_path_dict:
+            #json_dict = json.loads(json_data)
+            #json_dict["file"]["path"] = file_path_dict[sequence_number.group(1)]
+            #json_data = json.dumps(json_dict)
 
         #if previous_sequence_number == sequence_number.group(1):
             #if possible_file_path:
@@ -141,7 +149,7 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
     possible_file_path = file_path.group(1) if file_path else None
     #possible_file_path = file_path.group(1) if file_path else None
     
-    return previous_sequence_number, possible_file_path
+    return previous_sequence_number, possible_file_path , file_path_dict
    
 
 # main sender loop 
@@ -159,8 +167,8 @@ def main():
             print("[*] Reading file ...")
             lines = f.readlines()
             for line in reversed(lines):
-                previous_sequence_number, possible_file_path = send_line(sock, line, file_type,previous_sequence_number, possible_file_path,file_path_dict)
-                file_path_dict[previous_sequence_number] = possible_file_path
+                previous_sequence_number, possible_file_path, file_path_dict  = send_line(sock, line, file_type,previous_sequence_number, possible_file_path,file_path_dict)
+                #file_path_dict[previous_sequence_number] = possible_file_path
                 #time.sleep(DELAY_BETWEEN_LINES)
             for key, value in file_path_dict.items():
                 print(f"{key} -> {value}")
