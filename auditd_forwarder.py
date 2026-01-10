@@ -137,13 +137,14 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
         json_dict = json.loads(json_data)
         json_dict["host"]["id"] = "1234567890abcdef"
         #ensure nested keys exist before assigning
-        if "process" not in json_dict:
-            json_dict["process"] = {}
-        if "parent" not in json_dict["process"]:
-            json_dict["process"]["parent"] = {}
-
-        json_dict["process"]["parent"]["executable"] = exe
-        json_dict["process"]["parent"]["name"] = comm
+        if ppid_match:
+            if "process" not in json_dict:
+                json_dict["process"] = {}
+            if "parent" not in json_dict["process"]:
+                json_dict["process"]["parent"] = {}
+            json_dict["process"]["parent"]["executable"] = exe
+            json_dict["process"]["parent"]["name"] = comm
+        
         json_data = json.dumps(json_dict)
 
 
