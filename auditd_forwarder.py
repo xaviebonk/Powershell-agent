@@ -149,8 +149,8 @@ def main():
     with socket.create_connection((LOGSTASH_HOST, LOGSTASH_PORT)) as sock:
         print(f"[+] Connected to Logstash at {LOGSTASH_HOST}:{LOGSTASH_PORT}")
 
-        #previous_sequence_number = None
-        #possible_file_path = None
+        previous_sequence_number = None
+        possible_file_path = None
 
         file_path_dict = {}
 
