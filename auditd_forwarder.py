@@ -73,7 +73,9 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
         target_syscall = re.search(r'SYSCALL=([^\s]+)', line)
         removable_syscall = re.search(r'syscall=([^\s]+)', line)
         sequence_number = re.search(r'audit\([^:]+:(\d+)\)', line)
-        file_path = re.search(r'type=PATH.*?\bname=([^\s]+)', line)
+        #file_path = re.search(r'type=PATH.*?\bname=([^\s]+)', line)
+        file_path = re.search(r'type=PATH.*?\bname="?([^"\s]+)"?', line)
+
         
 
         if removable_syscall:
