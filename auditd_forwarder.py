@@ -160,7 +160,7 @@ def main():
             lines = f.readlines()
             for line in reversed(lines):
                 previous_sequence_number, possible_file_path = send_line(sock, line, file_type,previous_sequence_number, possible_file_path,file_path_dict)
-                file_path_dict["previous_sequence_number"] = possible_file_path
+                file_path_dict[previous_sequence_number] = possible_file_path
                 #time.sleep(DELAY_BETWEEN_LINES)
             for key, value in file_path_dict.items():
                 print(f"{key} -> {value}")
