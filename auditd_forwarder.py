@@ -108,7 +108,7 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
                 text=True
             )
 
-            if result.returncode == 0 or not result.stdout.strip():
+            if result.returncode != 0 or not result.stdout.strip():
                 print("Parent process not found")
                 comm = "-"
                 exe = "-"
