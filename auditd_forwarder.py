@@ -194,10 +194,11 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
     # Send over TCP
     sock.sendall((json_data + "\n").encode("utf-8"))  # newline separates messages
 
-    previous_sequence_number = sequence_number.group(1) if sequence_number else None
-    possible_file_path = file_path.group(1) if file_path else None
+    #previous_sequence_number = sequence_number.group(1) if sequence_number else None
     #possible_file_path = file_path.group(1) if file_path else None
-    
+    #possible_file_path = file_path.group(1) if file_path else None
+    previous_sequence_number = "nothing"
+    possible_file_path = "nothing"
     return previous_sequence_number, possible_file_path , file_path_dict
    
 
