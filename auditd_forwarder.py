@@ -157,8 +157,9 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
             match = re.search(r'([^/]+)$', file_path_value)
             if match:
                 file_name = match.group(1)
+                json_dict["file"]["name"] = file_name
+                
             json_dict["file"]["path"] = file_path_dict[sequence_number.group(1)]
-            json_dict["file"]["name"] = file_name
             json_data = json.dumps(json_dict)
 
         if sequence_number and sequence_number.group(1) in file_path_dict:
@@ -167,8 +168,9 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
             match = re.search(r'([^/]+)$', file_path_value)
             if match:
                 file_name = match.group(1)
+                json_dict["file"]["name"] = file_name
             json_dict["file"]["path"] = file_path_dict[sequence_number.group(1)]
-            json_dict["file"]["name"] = file_name
+            #json_dict["file"]["name"] = file_name
             json_data = json.dumps(json_dict)
 
         #if sequence_number.group(1) in file_path_dict:
