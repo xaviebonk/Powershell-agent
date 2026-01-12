@@ -79,7 +79,7 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
         args = re.findall(r'a\d+="([^"]*)"', line)
 
         Delete_file_pattern = re.search(
-            r'type=PATH\b.*\bname=([^\s]+)\b.*\bnametype=(DELETE|CREATED)\b',
+            r'type=PATH\b.*\bname=(?:"([^"]+)"|([^\s]+))\b.*\bnametype=(DELETE|CREATED)\b',
             line
         )
 
