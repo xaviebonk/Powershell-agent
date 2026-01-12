@@ -51,7 +51,7 @@ print("[*] The program by default will send auditd logs from /var/log/audit/audi
 
 
 #Function to send JSON lines
-def send_line(sock, line, file_type, previous_sequence_number, possible_file_path ,file_path_dict):
+def send_line(sock, line, file_type, previous_sequence_number, possible_file_path ,file_path_dict,args_dict):
     # Strip newlines
     line = line.strip()
     if not line:
@@ -76,6 +76,12 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
         #file_path = re.search(r'type=PATH.*?\bname=([^\s]+)', line)
         file_path = re.search(r'type=PATH.*?\bname="?([^"\s]+)"?', line)
         ppid_match = re.search(r'\bppid=(\d+)\b', line)
+        args = re.findall(r'a\d+="([^"]*)"', line)
+
+        Delete_file_pattern = re.search(
+            r'type=PATH\b.*\bname=([^\s]+)\b.*\bnametype=(DELETE|CREATED)\b',
+            line
+        )
 
         
 
@@ -149,33 +155,66 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
         
         json_data = json.dumps(json_dict)
 
+        if args:
+            args_dict[sequence_number.group(1)] = args
+        
+        if sequence_number and sequence_number.group(1) in args_dict:
+            json_dict = json.loads(json_data)
+            if "process" not in json_dict:
+                json_dict["process"] = {}
+            json_dict["process"]["args"] = args_dict[sequence_number.group(1)]
+            json_data = json.dumps(json_dict)
+
+
+
         #Store file path and file name based on sequence number
         if file_path and sequence_number:
-            file_path_dict[sequence_number.group(1)] = file_path.group(1)
+            #file_path_dict[sequence_number.group(1)] = file_path.group(1)
+            #if sequence_number.group(1) in file_path_dict:
+                #if file_path_dict[sequence_number.group(1)]["override_name"] != None:
+                    
+            if sequence_number.group(1) not in file_path_dict:
+                file_path_dict[sequence_number.group(1)] = {
+                    "path": file_path.group(1),
+                    "name": None,
+                    "override_name": None 
+                }
+            
+            file_path_dict[sequence_number.group(1)]["path"] = file_path.group(1)
             json_dict = json.loads(json_data)
-            file_path_value = file_path_dict[sequence_number.group(1)]
+            file_path_value = file_path_dict[sequence_number.group(1)]["path"]
             match = re.search(r'([^/]+)$', file_path_value)
             if match:
                 file_name = match.group(1)
+                file_path_dict[sequence_number.group(1)]["name"] = file_name
+
                 json_dict["file"]["name"] = file_name
-                
-            json_dict["file"]["path"] = file_path_dict[sequence_number.group(1)]
+            if Delete_file_pattern:
+                file_path_dict[sequence_number.group(1)]["override_name"] = Delete_file_pattern.group(1)
+
+            json_dict["file"]["path"] = file_path_dict[sequence_number.group(1)]["path"]
             json_data = json.dumps(json_dict)
 
         if sequence_number and sequence_number.group(1) in file_path_dict:
             json_dict = json.loads(json_data)
-            file_path_value = file_path_dict[sequence_number.group(1)]
-            match = re.search(r'([^/]+)$', file_path_value)
-            if match:
-                file_name = match.group(1)
-                json_dict["file"]["name"] = file_name
-            json_dict["file"]["path"] = file_path_dict[sequence_number.group(1)]
-            #json_dict["file"]["name"] = file_name
+            if file_path_dict[sequence_number.group(1)]["override_name"]:
+                json_dict["file"]["name"] = file_path_dict[sequence_number.group(1)]["override_name"]
+            else:
+                #file_path_value = file_path_dict[sequence_number.group(1)]
+                #match = re.search(r'([^/]+)$', file_path_value)
+                #if match:
+                    #file_name = match.group(1)
+
+                    #json_dict["file"]["name"] = file_name
+                json_dict["file"]["name"] = file_path_dict[sequence_number.group(1)]["name"]
+            json_dict["file"]["path"] = file_path_dict[sequence_number.group(1)]["path"]
+                #json_dict["file"]["name"] = file_name
             json_data = json.dumps(json_dict)
 
         #if sequence_number.group(1) in file_path_dict:
             #json_dict = json.loads(json_data)
-            #json_dict["file"]["path"] = file_path_dict[sequence_number.group(1)]
+            #json_dict["file"]["path"] = file_pat
+            # h_dict[sequence_number.group(1)]
             #json_data = json.dumps(json_dict)
 
         #if previous_sequence_number == sequence_number.group(1):
@@ -212,12 +251,14 @@ def main():
 
         file_path_dict = {}
 
+        args_dict = {}
+
 
         with open(FILE_TO_SEND, "r") as f:
             print("[*] Reading file ...")
             lines = f.readlines()
             for line in reversed(lines):
-                previous_sequence_number, possible_file_path, file_path_dict  = send_line(sock, line, file_type,previous_sequence_number, possible_file_path,file_path_dict)
+                previous_sequence_number, possible_file_path, file_path_dict, args_dict = send_line(sock, line, file_type,previous_sequence_number, possible_file_path,file_path_dict,args_dict)
                 #file_path_dict[previous_sequence_number] = possible_file_path
                 #time.sleep(DELAY_BETWEEN_LINES)
             for key, value in file_path_dict.items():
