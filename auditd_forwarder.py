@@ -79,9 +79,10 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
         args = re.findall(r'a\d+="([^"]*)"', line)
 
         Delete_file_pattern = re.search(
-            r'type=PATH\b.*\bname=(?:"([^"]+)"|([^\s]+))\b.*\bnametype=(DELETE|CREATED)\b',
+            r'type=PATH\b.*\bname="?([^"\s]+)"?\b.*\bnametype=(DELETE|CREATED)\b',
             line
         )
+
 
         
 
@@ -238,7 +239,7 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
     #possible_file_path = file_path.group(1) if file_path else None
     previous_sequence_number = "nothing"
     possible_file_path = "nothing"
-    return previous_sequence_number, possible_file_path , file_path_dict
+    return previous_sequence_number, possible_file_path , file_path_dict,args_dict
    
 
 # main sender loop 
@@ -263,6 +264,10 @@ def main():
                 #time.sleep(DELAY_BETWEEN_LINES)
             for key, value in file_path_dict.items():
                 print(f"{key} -> {value}")
+            for key, value in args_dict.items():
+                print(f"{key} -> {value}")
+            
+            
 
 
         print("[+] Done sending lines")
