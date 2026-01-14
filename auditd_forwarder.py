@@ -172,9 +172,10 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
 
         #match and store command line based on sequence number
         if commandline_match:
-            raw_cmd = commandline_dict[sequence_number.group(1)]
+            raw_cmd = commandline_match.group(1)
             decoded_cmd = hex_to_ascii(raw_cmd)
-            commandline_dict[sequence_number.group(1)] = decoded_cmd
+            decoded = decoded_cmd.replace("\x00", " ").replace("\u0000", " ")
+            commandline_dict[sequence_number.group(1)] = decoded
 
 
         if sequence_number.group(1) in commandline_dict:
