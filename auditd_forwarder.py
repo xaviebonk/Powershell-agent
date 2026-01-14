@@ -48,6 +48,11 @@ LOGSTASH_HOST = "192.168.186.131"  # Logstash IP
 DELAY_BETWEEN_LINES = 0.1    # Seconds between sending lines (optional)
 print("[*] The program by default will send auditd logs from /var/log/audit/audit.log to logstash")
 
+def hex_to_ascii(hex_str):
+    try:
+        return bytes.fromhex(hex_str).decode("ascii", errors="ignore")
+    except ValueError:
+        return hex_str  # fallback if not valid hex
 
 
 #Function to send JSON lines
@@ -174,7 +179,11 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
             json_dict = json.loads(json_data)
             if "process" not in json_dict:
                 json_dict["process"] = {}
-            json_dict["process"]["command_line"] = commandline_dict[sequence_number.group(1)]
+            raw_cmd = commandline_dict[sequence_number.group(1)]
+
+            decoded_cmd = hex_to_ascii(raw_cmd)
+            
+            json_dict["process"]["command_line"] = decoded_cmd
             json_data = json.dumps(json_dict)
             
             
