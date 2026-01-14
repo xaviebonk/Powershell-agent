@@ -172,18 +172,16 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
 
         #match and store command line based on sequence number
         if commandline_match:
-            commandline_dict[sequence_number.group(1)] = commandline_match.group(1)
+            raw_cmd = commandline_dict[sequence_number.group(1)]
+            decoded_cmd = hex_to_ascii(raw_cmd)
+            commandline_dict[sequence_number.group(1)] = decoded_cmd
 
 
         if sequence_number.group(1) in commandline_dict:
             json_dict = json.loads(json_data)
             if "process" not in json_dict:
                 json_dict["process"] = {}
-            raw_cmd = commandline_dict[sequence_number.group(1)]
-
-            decoded_cmd = hex_to_ascii(raw_cmd)
-            
-            json_dict["process"]["command_line"] = decoded_cmd
+            json_dict["process"]["command_line"] = commandline_dict[sequence_number.group(1)]
             json_data = json.dumps(json_dict)
             
             
