@@ -51,7 +51,7 @@ print("[*] The program by default will send auditd logs from /var/log/audit/audi
 
 
 #Function to send JSON lines
-def send_line(sock, line, file_type, previous_sequence_number, possible_file_path ,file_path_dict,args_dict):
+def send_line(sock, line, file_type, previous_sequence_number, possible_file_path ,file_path_dict,args_dict,commandline_dict):
     # Strip newlines
     line = line.strip()
     if not line:
@@ -70,10 +70,13 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
     })
         
     else:
+        # Parse auditd line for syscall and sequence number
         target_syscall = re.search(r'SYSCALL=([^\s]+)', line)
         removable_syscall = re.search(r'syscall=([^\s]+)', line)
         sequence_number = re.search(r'audit\([^:]+:(\d+)\)', line)
         #file_path = re.search(r'type=PATH.*?\bname=([^\s]+)', line)
+
+        # Parse auditd line for file path, ppid and args
         file_path = re.search(r'type=PATH.*?\bname="?([^"\s]+)"?', line)
         ppid_match = re.search(r'\bppid=(\d+)\b', line)
         args = re.findall(r'a\d+="([^"]*)"', line)
@@ -83,8 +86,9 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
             line
         )
 
+        #Command Line to get process.command_line
+        commandline_match = re.search(r'proctitle=([^\n]+)', line)
 
-        
 
         if removable_syscall:
             new_syscall = target_syscall.group(1)
@@ -156,8 +160,24 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
         
         json_data = json.dumps(json_dict)
 
+        #match and store args based on sequene number
+
         if args:
             args_dict[sequence_number.group(1)] = args
+
+        #match and store command line based on sequence number
+        if commandline_match:
+            commandline_dict[sequence_number.group(1)] = commandline_match.group(1)
+
+
+        if sequence_number.group(1) in commandline_dict:
+            json_dict = json.loads(json_data)
+            if "process" not in json_dict:
+                json_dict["process"] = {}
+            json_dict["process"]["command_line"] = commandline_dict[sequence_number.group(1)]
+            json_data = json.dumps(json_dict)
+            
+            
         
         if sequence_number and sequence_number.group(1) in args_dict:
             json_dict = json.loads(json_data)
@@ -239,7 +259,7 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
     #possible_file_path = file_path.group(1) if file_path else None
     previous_sequence_number = "nothing"
     possible_file_path = "nothing"
-    return previous_sequence_number, possible_file_path , file_path_dict,args_dict
+    return previous_sequence_number, possible_file_path , file_path_dict,args_dict,commandline_dict
    
 
 # main sender loop 
@@ -254,19 +274,23 @@ def main():
 
         args_dict = {}
 
+        commandline_dict = {}
+
 
         with open(FILE_TO_SEND, "r") as f:
             print("[*] Reading file ...")
             lines = f.readlines()
             for line in reversed(lines):
-                previous_sequence_number, possible_file_path, file_path_dict, args_dict = send_line(sock, line, file_type,previous_sequence_number, possible_file_path,file_path_dict,args_dict)
+                previous_sequence_number, possible_file_path, file_path_dict, args_dict,commandline_dict = send_line(sock, line, file_type,previous_sequence_number, possible_file_path,file_path_dict,args_dict,commandline_dict)
                 #file_path_dict[previous_sequence_number] = possible_file_path
                 #time.sleep(DELAY_BETWEEN_LINES)
+            #for debugging purposes to  see stored file paths, args and command lines.
             for key, value in file_path_dict.items():
                 print(f"{key} -> {value}")
             for key, value in args_dict.items():
                 print(f"{key} -> {value}")
-            
+            for key, value in commandline_dict.items():
+                print(f"{key} -> {value}")
             
 
 
