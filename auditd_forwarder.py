@@ -56,7 +56,7 @@ def hex_to_ascii(hex_str):
 
 
 #Function to send JSON lines
-def send_line(sock, line, file_type, previous_sequence_number, possible_file_path ,file_path_dict,args_dict,commandline_dict):
+def send_line(sock, line, file_type, previous_sequence_number, possible_file_path ,file_path_dict,args_dict,commandline_dict,pid_dict):
     # Strip newlines
     line = line.strip()
     if not line:
@@ -84,6 +84,7 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
         # Parse auditd line for file path, ppid and args
         file_path = re.search(r'type=PATH.*?\bname="?([^"\s]+)"?', line)
         ppid_match = re.search(r'\bppid=(\d+)\b', line)
+        #pid_match = re.search(r'pid=(\d+).*?exe="([^"]*/([^"/]+))"', line)
         args = re.findall(r'a\d+="([^"]*)"', line)
 
         Delete_file_pattern = re.search(
@@ -125,9 +126,13 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
             )
 
             if result.returncode != 0 or not result.stdout.strip():
-                print("Parent process not found")
-                comm = "-"
-                exe = "-"
+                if ppid in pid_dict:
+                    comm = pid_dict[ppid]["name"]
+                    exe = pid_dict[ppid]["executable"]
+                else:
+                    print("Parent process not found")
+                    comm = "-"
+                    exe = "-"
             else:
                 comm,exe = result.stdout.strip().split(None,1)
 
@@ -284,12 +289,30 @@ def main():
 
         commandline_dict = {}
 
+        pid_dict = {}
+
 
         with open(FILE_TO_SEND, "r") as f:
             print("[*] Reading file ...")
             lines = f.readlines()
+            print("[*] Extracting process info ...")
+            print("[*] This may take a while for large log files ...")
+            for line in lines:
+                pid_match = re.search(r'pid=(\d+).*?exe="([^"]*/([^"/]+))"', line)
+                line = line.strip()
+                if not line:
+                        return
+                if pid_match:
+                    pid = pid_match.group(1)
+                    exe_full = pid_match.group(2)
+                    exe_name = pid_match.group(3)
+                    pid_dict[pid] = {
+                        "executable": exe_full,
+                        "name": exe_name
+                    }
+                
             for line in reversed(lines):
-                previous_sequence_number, possible_file_path, file_path_dict, args_dict,commandline_dict = send_line(sock, line, file_type,previous_sequence_number, possible_file_path,file_path_dict,args_dict,commandline_dict)
+                previous_sequence_number, possible_file_path, file_path_dict, args_dict,commandline_dict = send_line(sock, line, file_type,previous_sequence_number, possible_file_path,file_path_dict,args_dict,commandline_dict,pid_dict)
                 #file_path_dict[previous_sequence_number] = possible_file_path
                 #time.sleep(DELAY_BETWEEN_LINES)
             #for debugging purposes to  see stored file paths, args and command lines.
