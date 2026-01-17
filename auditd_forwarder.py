@@ -117,24 +117,6 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
                                 
                             }
                         })
-        if ppid_match:
-            ppid = ppid_match.group(1)
-            result = subprocess.run(
-                ["ps", "-p", ppid, "-o", "comm=,exe="],
-                capture_output=True,
-                text=True
-            )
-
-            if result.returncode != 0 or not result.stdout.strip():
-                if ppid in pid_dict:
-                    comm = pid_dict[ppid]["name"]
-                    exe = pid_dict[ppid]["executable"]
-                else:
-                    print("Parent process not found")
-                    comm = "-"
-                    exe = "-"
-            else:
-                comm,exe = result.stdout.strip().split(None,1)
 
 
         else:
@@ -161,10 +143,16 @@ def send_line(sock, line, file_type, previous_sequence_number, possible_file_pat
         json_dict["host"]["id"] = "1234567890abcdef"
         #ensure nested keys exist before assigning
         if ppid_match:
+            ppid = ppid_match.group(1)
+            comm = "-"
+            exe = "-"
             if "process" not in json_dict:
                 json_dict["process"] = {}
             if "parent" not in json_dict["process"]:
                 json_dict["process"]["parent"] = {}
+            if ppid in pid_dict:
+                comm = pid_dict[ppid]["name"]
+                exe = pid_dict[ppid]["executable"]
             json_dict["process"]["parent"]["executable"] = exe
             json_dict["process"]["parent"]["name"] = comm
         
